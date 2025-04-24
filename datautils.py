@@ -225,7 +225,7 @@ def slice_audio_and_label( audio, label, total_spec_columns ):
     clip_duration = total_spec_columns * label["spec_time_step"]
     
     num_samples_in_clip = int( np.round( clip_duration * sr ) )
-    padded_audio = np.concatenate( [ np.zeros( num_samples_in_clip ), audio ], axis = 0 )
+    padded_audio = np.concatenate( [ np.zeros(num_samples_in_clip), audio[:num_samples_in_clip]], axis = 0 )
     padded_label = {
         "onset": label["onset"] + clip_duration,
         "offset": label["offset"] + clip_duration,
@@ -234,11 +234,15 @@ def slice_audio_and_label( audio, label, total_spec_columns ):
     }
     audio_clip_list = []
     label_clip_list = []
-    for pos in range( 0, len(padded_audio), num_samples_in_clip ):
+    for pos in range( 0, len(padded_audio) + num_samples_in_clip, num_samples_in_clip ):
         ## one clip contains 2 x clip_duration: the first clip_duration is the (left) padded audio part, 
         ## and the second clip_duration is the main audio part
-        audio_clip = padded_audio[ pos:pos + 2 * num_samples_in_clip]  
-
+        # TODO: verify
+        #if pos < num_samples_in_clip:
+        #    audio_clip = np.zeros(num_samples_in_clip-pos) + audio[:pos + num_samples_in_clip] 
+        #else:
+        #    audio_clip = audio[ (pos-num_samples_in_clip):(pos-num_samples_in_clip) + 2 * num_samples_in_clip]
+        audio_clip = padded_audio[ pos:pos + 2 * num_samples_in_clip]
         ## drop too short audios
         if len(audio_clip) / sr < 0.1:
             continue
