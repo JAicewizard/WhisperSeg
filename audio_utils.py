@@ -39,7 +39,7 @@ class WhisperSegFeatureExtractor( WhisperFeatureExtractor ):
             max_frequency = sr // 2
             
         super().__init__(             
-            feature_size=80,
+            feature_size=128,
             sampling_rate=sr,
             hop_length=hop_length,
             chunk_length = chunk_length,
@@ -49,7 +49,7 @@ class WhisperSegFeatureExtractor( WhisperFeatureExtractor ):
             
         self.mel_filters = mel_filter_bank(
             num_frequency_bins=1 + n_fft // 2,
-            num_mel_filters=80,
+            num_mel_filters=128,
             min_frequency=min_frequency,
             max_frequency=max_frequency,
             sampling_rate=sr,

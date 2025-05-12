@@ -22,25 +22,25 @@ import json
 from peft import prepare_model_for_kbit_training
 from peft import LoraConfig, PeftModel, LoraModel, LoraConfig, get_peft_model
 
-from transformers import get_linear_schedule_with_warmup
+from transformers import AdamW, get_linear_schedule_with_warmup
 
 def train_iteration(batch):
     for key in batch:
         batch[key] = batch[key].to(device)
     
     optimizer.zero_grad()
-    #with torch.amp.autocast(device_type="cuda", dtype=torch.float16):
-    model_out = model( **batch )
-    loss = model_out.loss.mean() 
+    with torch.amp.autocast(device_type="cuda", dtype=torch.float16):
+        model_out = model( **batch )
+        loss = model_out.loss.mean() 
     #torch.cuda.empty_cache()
     #print(torch.cuda.memory_summary())     
-    loss.backward()
-    #scaler.scale(loss).backward()
+    #loss.backward()
+    scaler.scale(loss).backward()
     #torch.cuda.empty_cache()
     #print(torch.cuda.memory_summary())     
-    #scaler.step(optimizer)
-    optimizer.step()
-    #scaler.update()
+    scaler.step(optimizer)
+    #optimizer.step()
+    scaler.update()
     
     """ 
     # normal version without float16 speedup
@@ -133,15 +133,16 @@ if __name__ == "__main__":
         {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
-    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr = args.learning_rate )
+    optimizer = AdamW(optimizer_grouped_parameters, lr = args.learning_rate )
+    #optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr = args.learning_rate )
    
-    model = prepare_model_for_kbit_training(model)
-    def make_inputs_require_grad(module, input, output):
-        output.requires_grad_(True)
+    #model = prepare_model_for_kbit_training(model)
+    #def make_inputs_require_grad(module, input, output):
+    #    output.requires_grad_(True)
 
-    model.model.encoder.conv1.register_forward_hook(make_inputs_require_grad)
-    config = LoraConfig(r=32, lora_alpha=64, target_modules=["q_proj", "v_proj"], lora_dropout=0.05, bias="none")
-    model = get_peft_model(model, config)
+    #model.model.encoder.conv1.register_forward_hook(make_inputs_require_grad)
+    #config = LoraConfig(r=32, lora_alpha=64, target_modules=["q_proj", "v_proj"], lora_dropout=0.05, bias="none")
+    #model = get_peft_model(model, config)
 
     #model = prepare_model_for_int8_training(model)
     model = nn.DataParallel( model, args.gpu_list )
